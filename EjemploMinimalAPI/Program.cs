@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer; // SE INCLUYE PARA LA AUTENTICACIÓN JWT
 using Microsoft.IdentityModel.Tokens; // SE INCLUYE PARA LA VALIDACIÓN DE TOKENS JWT
+using Microsoft.OpenApi.Models;
 using System.ComponentModel.DataAnnotations;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -10,7 +11,10 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "Practica Programada 3 Grupo B", Version = "v1" });
+});
 
 
 var key = "my_secret_key_12345___________________________________________________"; // Clave secreta para firmar el token (debe ser segura y almacenada de forma segura)
@@ -51,7 +55,10 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Practica Programada 3 Grupo B v1");
+    });
 }
 
 app.UseHttpsRedirection();
@@ -70,6 +77,13 @@ List<Persona> personas = new List<Persona>()
             new Persona("Maria", "Gomez", 25),
             new Persona("Carlos", "Lopez", 40)
     };
+
+List<Vehiculo> vehiculos = new List<Vehiculo>()
+    {
+            new Vehiculo { Id = 1, Marca = "Toyota", Modelo = "Corolla", Año = 2020, Precio = 12500m },
+            new Vehiculo { Id = 2, Marca = "Honda", Modelo = "Civic", Año = 2021, Precio = 14200m },
+            new Vehiculo { Id = 3, Marca = "Hyundai", Modelo = "Elantra", Año = 2019, Precio = 10800m }
+    };
 #endregion
 
 #region EndPointsClima
@@ -86,7 +100,7 @@ app.MapGet("/weatherforecast", () =>
     return forecast;
 })
 .WithName("GetWeatherForecast")
-.WithOpenApi();
+.ExcludeFromDescription();
 #endregion EndPointsClima
 
 
@@ -120,7 +134,7 @@ app.MapGet("/personas", () =>
     return Results.Ok(personas);
 })
 .WithName("GetPersonas")
-.WithOpenApi();
+.ExcludeFromDescription();
 
 
 app.MapPost("/personas", (Persona persona) =>
@@ -129,7 +143,7 @@ app.MapPost("/personas", (Persona persona) =>
     return Results.Ok(persona);
 })
 .WithName("AddPersona")
-.WithOpenApi();
+.ExcludeFromDescription();
 
 app.MapGet("/personas/{posicion}", (int posicion) =>
 {
@@ -140,7 +154,7 @@ app.MapGet("/personas/{posicion}", (int posicion) =>
     return Results.Ok(personas[posicion]);
 })
 .WithName("GetPersona")
-.WithOpenApi();
+.ExcludeFromDescription();
 
 // PUT: update a persona at the specified position (posicion is required in the route)
 app.MapPut("/personas/{posicion}", (int posicion, Persona persona) =>
@@ -155,7 +169,7 @@ app.MapPut("/personas/{posicion}", (int posicion, Persona persona) =>
     return Results.Ok(persona);
 })
 .WithName("UpdatePersona")
-.WithOpenApi();
+.ExcludeFromDescription();
 
 // DELETE: remove a persona by position (use position as required parameter to avoid ambiguity)
 app.MapDelete("/personas/{posicion}", (int posicion) =>
@@ -169,6 +183,72 @@ app.MapDelete("/personas/{posicion}", (int posicion) =>
     return Results.Ok();
 })
 .WithName("DeletePersona")
+.ExcludeFromDescription();
+
+app.MapGet("/vehiculo", () =>
+{
+    return Results.Ok(vehiculos);
+})
+.WithName("GetVehiculos")
+.WithOpenApi();
+
+app.MapGet("/vehiculo/{id:int}", (int id) =>
+{
+    var vehiculo = vehiculos.FirstOrDefault(v => v.Id == id);
+    if (vehiculo is null)
+    {
+        return Results.NotFound("Vehiculo no encontrado");
+    }
+
+    return Results.Ok(vehiculo);
+})
+.WithName("GetVehiculo")
+.WithOpenApi();
+
+app.MapPost("/vehiculo", (Vehiculo vehiculo) =>
+{
+    if (vehiculos.Any(v => v.Id == vehiculo.Id))
+    {
+        return Results.Conflict("Ya existe un vehiculo con ese Id");
+    }
+
+    vehiculos.Add(vehiculo);
+    return Results.Created($"/vehiculo/{vehiculo.Id}", vehiculo);
+})
+.WithName("AddVehiculo")
+.WithOpenApi();
+
+app.MapPut("/vehiculo/{id:int}", (int id, Vehiculo vehiculo) =>
+{
+    var indice = vehiculos.FindIndex(v => v.Id == id);
+    if (indice < 0)
+    {
+        return Results.NotFound("Vehiculo no encontrado");
+    }
+
+    if (id != vehiculo.Id && vehiculos.Any(v => v.Id == vehiculo.Id))
+    {
+        return Results.Conflict("Ya existe un vehiculo con el nuevo Id");
+    }
+
+    vehiculos[indice] = vehiculo;
+    return Results.NoContent();
+})
+.WithName("UpdateVehiculo")
+.WithOpenApi();
+
+app.MapDelete("/vehiculo/{id:int}", (int id) =>
+{
+    var vehiculo = vehiculos.FirstOrDefault(v => v.Id == id);
+    if (vehiculo is null)
+    {
+        return Results.NotFound("Vehiculo no encontrado");
+    }
+
+    vehiculos.Remove(vehiculo);
+    return Results.NoContent();
+})
+.WithName("DeleteVehiculo")
 .WithOpenApi();
 
 
@@ -207,6 +287,24 @@ public record Persona
         Apellido = apellido;
         Edad = edad;
     }
+}
+
+public class Vehiculo
+{
+    [Range(1, int.MaxValue, ErrorMessage = "Id debe ser mayor que 0")]
+    public int Id { get; set; }
+
+    [Required(ErrorMessage = "Marca requerida")]
+    public string Marca { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "Modelo requerido")]
+    public string Modelo { get; set; } = string.Empty;
+
+    [Range(1886, 2100, ErrorMessage = "Año fuera de rango")]
+    public int Año { get; set; }
+
+    [Range(0, double.MaxValue, ErrorMessage = "Precio debe ser mayor o igual a 0")]
+    public decimal Precio { get; set; }
 }
 #endregion
 
