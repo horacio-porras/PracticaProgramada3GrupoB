@@ -1,0 +1,42 @@
+@EjemploAPI_HostAddress = http://localhost:5291
+
+GET {{EjemploAPI_HostAddress}}/vehiculo
+Accept: application/json
+
+###
+
+GET {{EjemploAPI_HostAddress}}/vehiculo/1
+Accept: application/json
+
+###
+
+POST {{EjemploAPI_HostAddress}}/vehiculo
+Content-Type: application/json
+
+{
+  "id": 4,
+  "marca": "Mazda",
+  "modelo": "3",
+  "año": 2022,
+  "precio": 16500
+}
+
+###
+
+PUT {{EjemploAPI_HostAddress}}/vehiculo/4
+Content-Type: application/json
+
+{
+  "id": 4,
+  "marca": "Mazda",
+  "modelo": "3 Touring",
+  "año": 2023,
+  "precio": 17900
+}
+
+###
+
+DELETE {{EjemploAPI_HostAddress}}/vehiculo/4
+Accept: application/json
+
+###
